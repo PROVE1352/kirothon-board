@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "board-gate",
+      "trigger": "PreToolUse",
+      "action": { "type": "command", "command": "$HOME/.kiro/skills/board/gate_hook.sh" },
+      "timeout": 15
+    }
+  ]
+}

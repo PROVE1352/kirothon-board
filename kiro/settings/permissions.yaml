@@ -1,0 +1,16 @@
+# Claude Code auto mode처럼: 기본은 전부 자동 허용, 위험한 명령만 물어봄
+# 우선순위 deny > ask > allow (Cedar forbid가 permit을 이김)
+rules:
+  - capability: all
+    effect: allow
+
+  - capability: shell
+    match:
+      - "sudo *"
+      - "rm -rf /*"
+      - "rm -rf ~*"
+      - "git push *--force*"
+      - "git push -f*"
+      - "git reset --hard*"
+      - "git clean -f*"
+    effect: ask

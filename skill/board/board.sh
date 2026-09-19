@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# kirothon-board 클라이언트. 설정: ~/.kirothon-board.env 에 BOARD_URL, BOARD_TOKEN, BOARD_LANE
+#   board.sh read                     상황판 + 내 레인에 온 지시
+#   board.sh status "한 일 / 다음"     진행 보고
+#   board.sh done "끝낸 것"            태스크 완료
+#   board.sh blocked "막힌 것"         막힘 (오케스트라가 봄)
+#   board.sh ask "질문"                다른 레인/오케스트라에게 질문
+#   board.sh human "결정할 것 A/B"     사람 판단 필요 → 내 레인 정지, 팀장 맥에 알림. 이어서 wait
+#   board.sh gate                     go면 exit 0, 정지 상태면 exit 3 (훅용)
+#   board.sh wait                     풀릴 때까지 15초 간격 대기 (최대 30분)
+#   board.sh order <lane|all> "지시"   (오케스트라 전용) human 정지도 풀림
+#   board.sh hold <lane|all> "사유"    (오케스트라 전용) 정지
+#   board.sh release <lane|all> ["메모"] (오케스트라 전용) 재개
+#   board.sh watch                    (팀장 맥) human/blocked 오면 macOS 알림
+#   board.sh events [since_id]         JSON 원본
+#   board.sh ip                       서버가 보는 내 공인 IP (403 나면 이걸 팀장에게 전달)
+#   board.sh allow <ip|cidr> [메모] / deny <ip|cidr> / allowed   (팀장 전용) IP allowlist
+set -euo pipefail
+# 환경변수가 이미 있으면 그쪽이 이긴다 (파일은 기본값)
+if [ -f "$HOME/.kirothon-board.env" ]; then
+  while IFS='=' read -r k v; do
+    case "$k" in BOARD_URL|BOARD_TOKEN|BOARD_LANE) [ -n "${!k:-}" ] || export "$k=$v" ;; esac
+  done < "$HOME/.kirothon-board.env"
+fi
+: "${BOARD_URL:?~/.kirothon-board.env 에 BOARD_URL 필요}" "${BOARD_TOKEN:?BOARD_TOKEN 필요}" "${BOARD_LANE:?BOARD_LANE 필요}"
+AUTH="Authorization: Bearer $BOARD_TOKEN"
+CURL=(curl -sS --max-time 10 -H "$AUTH")
+
+post() { # kind text [to]
+  python3 - "$BOARD_LANE" "$@" <<'PY' | "${CURL[@]}" -X POST -H 'Content-Type: application/json' --data-binary @- "$BOARD_URL/post"
+import json, sys
+lane, kind, text = sys.argv[1:4]
+d = {"lane": lane, "kind": kind, "text": text}
+if len(sys.argv) > 4: d["to"] = sys.argv[4]
+print(json.dumps(d, ensure_ascii=False))
+PY
+}
+
+cmd="${1:-read}"; shift || true
+case "$cmd" in
+  ip)     curl -sS --max-time 10 "$BOARD_URL/ip" ;;
+  allowed) "${CURL[@]}" "$BOARD_URL/allow" ;;
+  allow|deny) python3 -c 'import json,sys; print(json.dumps({"ip": sys.argv[1], "memo": sys.argv[2]}))' "${1:?ip 필요}" "${2:-}" |
+            "${CURL[@]}" -X POST -H 'Content-Type: application/json' --data-binary @- "$BOARD_URL/$cmd" ;;
+  read)   "${CURL[@]}" "$BOARD_URL/board?lane=$BOARD_LANE" ;;
+  events) "${CURL[@]}" "$BOARD_URL/events?since=${1:-0}" ;;
+  status|done|blocked|ask|note|human) post "$cmd" "${1:?내용 필요}" ;;
+  order|hold) post "$cmd" "${2:?내용 필요}" "${1:?대상 레인 필요}" ;;
+  release) post release "${2:-재개}" "${1:?대상 레인 필요}" ;;
+  gate)   g=$("${CURL[@]}" "$BOARD_URL/gate?lane=$BOARD_LANE"); echo "$g"; [ "${g%% *}" = go ] || exit 3 ;;
+  wait)   for _ in $(seq 120); do
+            g=$("${CURL[@]}" "$BOARD_URL/gate?lane=$BOARD_LANE" || echo "hold (네트워크 오류)")
+            [ "${g%% *}" = go ] && { echo "go — 재개. board.sh read 로 지시 확인"; exit 0; }
+            sleep 15
+          done; echo "30분째 정지: $g"; exit 3 ;;
+  watch)  since=$("${CURL[@]}" "$BOARD_URL/events" | python3 -c 'import json,sys; e=json.load(sys.stdin); print(e[-1]["id"] if e else 0)')
+          echo "watching from #$since"
+          while sleep 10; do
+            "${CURL[@]}" "$BOARD_URL/events?since=$since" 2>/dev/null | python3 -c '
+import json, sys, subprocess
+try: evs = json.load(sys.stdin)
+except ValueError: evs = []
+for e in evs:
+    print("#%(id)s [%(lane)s] %(kind)s: %(text)s" % e, file=sys.stderr)
+    if e["kind"] in ("human", "blocked"):
+        subprocess.run(["osascript", "-e", "on run a\ndisplay notification (item 2 of a) with title (item 1 of a) sound name \"Glass\"\nend run",
+                        ("🙋 " if e["kind"] == "human" else "⛔ ") + e["lane"], e["text"][:200]])
+print(evs[-1]["id"] if evs else "")' > "${TMPDIR:-/tmp}/.board_since" || true
+            n=$(cat "${TMPDIR:-/tmp}/.board_since"); [ -n "$n" ] && since=$n
+          done ;;
+  *) sed -n '2,18p' "$0"; exit 1 ;;
+esac
