@@ -14,6 +14,7 @@
 #   board.sh release <lane|all> ["메모"] (오케스트라 전용) 재개
 #   board.sh watch                    (팀장 맥) human/blocked 오면 macOS 알림
 #   board.sh events [since_id]         JSON 원본
+#   board.sh doctor [프로젝트 폴더]   설치 점검 (스킬·토큰·IP·오토모드·프로젝트 훅/steering)
 #   board.sh ip                       서버가 보는 내 공인 IP (403 나면 이걸 팀장에게 전달)
 #   board.sh allow <ip|cidr> [메모] / deny <ip|cidr> / allowed   (팀장 전용) IP allowlist
 set -euo pipefail
@@ -39,6 +40,20 @@ PY
 
 cmd="${1:-read}"; shift || true
 case "$cmd" in
+  doctor) ok() { echo "✅ $1"; }; no() { echo "❌ $1"; bad=1; }; bad=0; D="$HOME/.kiro/skills/board"
+          for f in SKILL.md board.sh gate_hook.sh auto_report.sh; do [ -e "$D/$f" ] || { no "스킬 파일 없음: $D/$f → ./setup.sh 다시"; }; done
+          [ -x "$D/gate_hook.sh" ] && [ -x "$D/auto_report.sh" ] && ok "board 스킬 설치됨 ($D)"
+          ok "내 레인: $BOARD_LANE"
+          g=$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BOARD_URL/gate?lane=$BOARD_LANE" || true)
+          case "$g" in 200) ok "상황판 연결 (토큰·IP 통과)" ;; 403) no "IP 미등록 → 이 IP를 팀장에게: $(curl -sS --max-time 10 "$BOARD_URL/ip")" ;;
+            401) no "토큰 틀림 → ./setup.sh <레인> <토큰> 다시" ;; *) no "상황판 서버에 못 닿음 (HTTP $g)" ;; esac
+          grep -q 'git commit' "$HOME/.kiro/settings/permissions.yaml" 2>/dev/null && ok "오토모드 + 커밋/푸시 차단 (permissions.yaml)" || no "permissions.yaml 에 커밋 차단 없음 → ./setup.sh 다시"
+          r=$(printf '{"command":"git commit -m x"}' | "$D/gate_hook.sh" 2>/dev/null; echo $?); [ "$r" = 2 ] && ok "훅 스크립트가 git commit 을 막음" || no "훅 스크립트 이상 (exit $r)"
+          if [ -n "${1:-}" ]; then
+            [ -f "$1/.kiro/hooks/board-gate.json" ] && ok "프로젝트 훅: $1/.kiro/hooks/board-gate.json" || no "프로젝트 훅 없음 → ./setup.sh <레인> <토큰> $1"
+            [ -f "$1/.kiro/steering/board.md" ] && ok "프로젝트 steering: $1/.kiro/steering/board.md" || no "프로젝트 steering 없음 → ./setup.sh <레인> <토큰> $1"
+          else echo "ℹ️  프로젝트 훅·steering 은 내일 저장소 받은 뒤: board.sh doctor <프로젝트 폴더>"; fi
+          [ "$bad" = 0 ] && echo "→ 전부 정상. Kiro에 '상황판 읽어' 를 쳐서 마지막 확인" || exit 1 ;;
   ip)     curl -sS --max-time 10 "$BOARD_URL/ip" ;;
   allowed) "${CURL[@]}" "$BOARD_URL/allow" ;;
   allow|deny) python3 -c 'import json,sys; print(json.dumps({"ip": sys.argv[1], "memo": sys.argv[2]}))' "${1:?ip 필요}" "${2:-}" |
@@ -81,5 +96,5 @@ for e in evs:
 print(evs[-1]["id"] if evs else "")' > "${TMPDIR:-/tmp}/.board_since" || true
             n=$(cat "${TMPDIR:-/tmp}/.board_since"); [ -n "$n" ] && since=$n
           done ;;
-  *) sed -n '2,19p' "$0"; exit 1 ;;
+  *) sed -n '2,20p' "$0"; exit 1 ;;
 esac
