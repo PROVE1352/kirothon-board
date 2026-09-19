@@ -19,7 +19,7 @@ git clone https://github.com/PROVE1352/kirothon-board && cd kirothon-board
 | `<프로젝트>/.kiro/hooks/board-gate.json` | AgentStop 훅 | 턴이 끝날 때 새 커밋이 있으면 상황판에 자동 보고 — 사람이 직접 Kiro를 모는 레인(프론트)도 피드가 끊기지 않음 |
 | 〃 | PreToolUse 훅 | 내 레인이 정지 상태면 **도구 호출 자체를 차단**(exit 2). 커밋·푸시 명령도 여기서 한 번 더 차단. board.sh 호출과 서버 불통 시에는 통과 |
 
-레인 이름은 팀에서 정한 것 하나(예: `viewer` `pipeline` `api` `deck`). 403 `ip … not allowed`가 나오면 출력된 IP를 팀장에게 보낸다. 와이파이를 바꾸면 IP도 바뀐다.
+레인 이름은 `KICKOFF.md` 명단의 자기 이름(`front-dongwook` `front-minsu` `back-kyuchan` `back-wooseok`). 403 `ip … not allowed`가 나오면 출력된 IP를 팀장에게 보낸다. 와이파이를 바꾸면 IP도 바뀐다.
 
 확인(1분): Kiro를 프로젝트 폴더에서 열고 "상황판 읽고 내 레인 상태 보고해"라고 시킨다 → 디스코드 `#orchestra`에 글이 뜨면 끝.
 훅 확인: 팀장이 `!hold <내 레인> 테스트` → Kiro에 아무 파일이나 고치라고 시킴 → 🛑 메시지와 함께 막히면 정상 → `!release <내 레인>`.
