@@ -98,7 +98,7 @@ def render(lane):
     for name in sorted(latest):
         e = latest[name]
         mark = {"blocked": "⛔", "done": "✅", "ask": "❓", "human": "🙋"}.get(e["kind"], "·")
-        out.append(f"{mark} [{name}] {hhmm(e['ts'])} {e['kind']}: {e['text']}")
+        out.append(f"{mark} [{name}] {hhmm(e['ts'])} {e['kind']}: {e['text'][:300]}")
     if not latest:
         out.append("(아직 없음)")
 
@@ -106,7 +106,7 @@ def render(lane):
     if blocked:
         out.append("\n== 막힘/질문 (미해결) ==")
         for e in blocked:
-            out.append(f"#{e['id']} [{e['lane']}] {e['text']}")
+            out.append(f"#{e['id']} [{e['lane']}] {e['text'][:300]}")
 
     orders = [e for e in evs if e["kind"] == "order" and e.get("to") in (lane, "all")]
     if lane:
@@ -119,7 +119,7 @@ def render(lane):
     out.append("\n== 최근 이벤트 10 ==")
     for e in evs[-10:]:
         to = f"→{e['to']}" if e.get("to") else ""
-        out.append(f"#{e['id']} {hhmm(e['ts'])} [{e['lane']}{to}] {e['kind']}: {e['text'][:200]}")
+        out.append(f"#{e['id']} {hhmm(e['ts'])} [{e['lane']}{to}] {e['kind']}: {e['text'][:120]}")
     return "\n".join(out) + "\n"
 
 
