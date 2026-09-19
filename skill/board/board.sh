@@ -8,6 +8,7 @@
 #   board.sh human "결정할 것 A/B"     사람 판단 필요 → 내 레인 정지, 팀장 맥에 알림. 이어서 wait
 #   board.sh gate                     go면 exit 0, 정지 상태면 exit 3 (훅용)
 #   board.sh wait                     풀릴 때까지 15초 간격 대기 (최대 30분)
+#   board.sh idle                     할 일이 떨어졌을 때: 내 레인 앞으로 새 지시가 올 때까지 대기 (최대 10분, 없으면 다시 실행)
 #   board.sh order <lane|all> "지시"   (오케스트라 전용) human 정지도 풀림
 #   board.sh hold <lane|all> "사유"    (오케스트라 전용) 정지
 #   board.sh release <lane|all> ["메모"] (오케스트라 전용) 재개
@@ -53,6 +54,18 @@ case "$cmd" in
             [ "${g%% *}" = go ] && { echo "go — 재개. board.sh read 로 지시 확인"; exit 0; }
             sleep 15
           done; echo "30분째 정지: $g"; exit 3 ;;
+  idle)   since=$("${CURL[@]}" "$BOARD_URL/events" | python3 -c 'import json,sys; e=json.load(sys.stdin); print(e[-1]["id"] if e else 0)')
+          for _ in $(seq 40); do
+            hit=$("${CURL[@]}" "$BOARD_URL/events?since=$since" 2>/dev/null | BOARD_LANE="$BOARD_LANE" python3 -c '
+import json, os, sys
+try: evs = json.load(sys.stdin)
+except ValueError: evs = []
+for e in evs:
+    if e["kind"] in ("order", "hold") and e.get("to") in (os.environ["BOARD_LANE"], "all"):
+        print("#%(id)s %(kind)s (%(lane)s): %(text)s" % e); break' || true)
+            [ -n "$hit" ] && { echo "새 지시: $hit"; echo "→ board.sh read 로 전체 확인 후 진행"; exit 0; }
+            sleep 15
+          done; echo "10분간 새 지시 없음 — 사람에게 다음 할 일을 묻거나 board.sh idle 을 다시 실행"; exit 0 ;;
   watch)  since=$("${CURL[@]}" "$BOARD_URL/events" | python3 -c 'import json,sys; e=json.load(sys.stdin); print(e[-1]["id"] if e else 0)')
           echo "watching from #$since"
           while sleep 10; do
@@ -68,5 +81,5 @@ for e in evs:
 print(evs[-1]["id"] if evs else "")' > "${TMPDIR:-/tmp}/.board_since" || true
             n=$(cat "${TMPDIR:-/tmp}/.board_since"); [ -n "$n" ] && since=$n
           done ;;
-  *) sed -n '2,18p' "$0"; exit 1 ;;
+  *) sed -n '2,19p' "$0"; exit 1 ;;
 esac

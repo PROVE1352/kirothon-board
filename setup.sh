@@ -18,6 +18,10 @@ if [ -n "${3:-}" ]; then
   cp "$DIR/kiro/hooks/board-gate.json" "$3/.kiro/hooks/board-gate.json"
   echo "프로젝트에 steering·hook 설치: $3/.kiro/"
 fi
-( umask 077; printf 'BOARD_URL=%s\nBOARD_TOKEN=%s\nBOARD_LANE=%s\n' "$URL" "$TOKEN" "$LANE" > "$HOME/.kirothon-board.env" )
+if grep -q '^TEAM_TOKEN=' "$HOME/.kirothon-board.env" 2>/dev/null; then
+  echo "팀장용 ~/.kirothon-board.env 가 있어 덮어쓰지 않는다 (관리자 토큰 보호)"
+else
+  ( umask 077; printf 'BOARD_URL=%s\nBOARD_TOKEN=%s\nBOARD_LANE=%s\n' "$URL" "$TOKEN" "$LANE" > "$HOME/.kirothon-board.env" )
+fi
 echo "내 IP: $(curl -sS --max-time 10 "$URL/ip")  ← 403이 나오면 이 IP를 팀장에게 보낸다"
 "$HOME/.kiro/skills/board/board.sh" read && echo "✅ 연결됨 (lane=$LANE)"
