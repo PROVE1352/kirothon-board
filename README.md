@@ -14,10 +14,10 @@ git clone https://github.com/PROVE1352/kirothon-board && cd kirothon-board
 |---|---|---|
 | `~/.kiro/skills/board/` | SKILL.md · board.sh · gate_hook.sh | 상황판 읽기·보고·정지 대기 (Kiro는 `~/.kiro/skills/`의 SKILL.md를 자동 인식) |
 | `~/.kirothon-board.env` | URL · 팀 토큰 · 내 레인 이름 | 권한 600, 저장소에 올리지 않음 |
-| `~/.kiro/settings/permissions.yaml` | auto mode | 기본 전부 자동 허용, `sudo`·`rm -rf`·`git push --force`·`git reset --hard`·`git clean -f`만 물어봄 (기존 파일은 `.bak-날짜`로 백업) |
+| `~/.kiro/settings/permissions.yaml` | auto mode | 기본 전부 자동 허용, `sudo`·`rm -rf`·`git reset --hard`·`git clean -f`는 물어봄, **`git commit`·`git push`·PR 생성은 차단**(사람이 직접. Kiro는 커밋에 적을 내용만 제안) (기존 파일은 `.bak-날짜`로 백업) |
 | `<프로젝트>/.kiro/steering/board.md` | 항상 켜진 규칙 | 태스크 전 read · 끝나면 done · 사람 판단은 human→wait |
 | `<프로젝트>/.kiro/hooks/board-gate.json` | AgentStop 훅 | 턴이 끝날 때 새 커밋이 있으면 상황판에 자동 보고 — 사람이 직접 Kiro를 모는 레인(프론트)도 피드가 끊기지 않음 |
-| 〃 | PreToolUse 훅 | 내 레인이 정지 상태면 **도구 호출 자체를 차단**(exit 2). board.sh 호출과 서버 불통 시에는 통과 |
+| 〃 | PreToolUse 훅 | 내 레인이 정지 상태면 **도구 호출 자체를 차단**(exit 2). 커밋·푸시 명령도 여기서 한 번 더 차단. board.sh 호출과 서버 불통 시에는 통과 |
 
 레인 이름은 팀에서 정한 것 하나(예: `viewer` `pipeline` `api` `deck`). 403 `ip … not allowed`가 나오면 출력된 IP를 팀장에게 보낸다. 와이파이를 바꾸면 IP도 바뀐다.
 
