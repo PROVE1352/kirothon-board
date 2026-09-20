@@ -206,7 +206,7 @@ class H(BaseHTTPRequestHandler):
             since = int(q.get("since", ["0"])[0])
             with lock:
                 evs = [e for e in events if e["id"] > since]
-            return self.send(200, json.dumps(evs, ensure_ascii=False), "application/json")
+            return self.send(200, json.dumps(evs, ensure_ascii=False), "application/json; charset=utf-8")
         self.send(404, "not found\n")
 
     def do_POST(self):

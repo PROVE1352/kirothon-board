@@ -16,6 +16,7 @@ if [ -n "${3:-}" ]; then
   mkdir -p "$3/.kiro/steering" "$3/.kiro/hooks"
   cp "$DIR/steering/board.md" "$3/.kiro/steering/board.md"
   cp "$DIR/kiro/hooks/board-gate.json" "$3/.kiro/hooks/board-gate.json"
+  grep -qxF '.kiro/hooks/board-gate.json' "$3/.gitignore" 2>/dev/null || echo '.kiro/hooks/board-gate.json' >> "$3/.gitignore"  # OS별 파일이라 커밋 금지
   echo "프로젝트에 steering·hook 설치: $3/.kiro/"
 fi
 if grep -q '^TEAM_TOKEN=' "$HOME/.kirothon-board.env" 2>/dev/null; then

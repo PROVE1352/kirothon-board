@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "board-gate",
+      "trigger": "PreToolUse",
+      "action": { "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.kiro\\skills\\board\\gate_hook.ps1\"" },
+      "timeout": 20
+    },
+    {
+      "name": "board-auto-report",
+      "trigger": "AgentStop",
+      "action": { "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\.kiro\\skills\\board\\auto_report.ps1\"" },
+      "timeout": 20
+    }
+  ]
+}

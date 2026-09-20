@@ -8,6 +8,13 @@
 git clone https://github.com/PROVE1352/kirothon-board && cd kirothon-board
 ./setup.sh <레인> <팀토큰> <프로젝트 폴더>
 ```
+**윈도우**는 PowerShell에서 (추가 설치 없음, bash·python 불필요):
+```powershell
+git clone https://github.com/PROVE1352/kirothon-board; cd kirothon-board
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 <레인> <팀토큰> <프로젝트 폴더>
+```
+명령은 `board.sh` 대신 `powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.kiro\skills\board\board.ps1 read|done|human|wait|idle|doctor`. 프로젝트의 `.kiro/hooks/board-gate.json`은 OS마다 달라 **커밋하지 않는다**(setup이 .gitignore에 넣음).
+
 이 한 줄이 하는 일:
 
 | 설치 위치 | 무엇 | 역할 |
